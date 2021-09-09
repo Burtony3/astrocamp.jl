@@ -1,0 +1,125 @@
+### A Pluto.jl notebook ###
+# v0.14.7
+
+using Markdown
+using InteractiveUtils
+
+# ╔═╡ 1ee99730-cbe0-11eb-38d2-059884f0d9ba
+begin
+	using LinearAlgebra, DifferentialEquations, Plots
+	md"""
+	## Astrocamp Module 2 Coding Assignment
+	### Problem 1
+	"""
+end
+
+# ╔═╡ 37042fbf-6450-499a-8330-e94b351594c2
+function CR3BP!(du, u, p, t)
+	# DECODING INPUTS
+	r⃗ = u[1:3]
+	v⃗ = u[4:6]
+	μ = p
+	
+	# CALCULATING MIDDLE VALUES
+	r⃗13 = r⃗ - [-μ, 0, 0]
+	r13 = norm(r⃗13)
+	r⃗23 = r⃗ - [1-μ, 0, 0]
+	r23 = norm(r⃗23)
+	
+	# EXPORTING
+	du[1:3] = v⃗
+	du[4:6] = -((1-μ)/r13^3)*r⃗13 - (μ/r23^3)*r⃗23 + [2*v⃗[2]+r⃗[1], -2*v⃗[1]+r⃗[2], 0]
+end
+
+# ╔═╡ cbbf957c-9399-4132-986a-601687d325c9
+begin
+	# ENV SETUP
+	μ = 0.0121505856
+	P = 3.042534324464009
+	S = [1.17, 0, 0, 0, -0.489780292125578, 0]
+	
+	# ODE SETUP
+	n = 10           # Number of Orbits
+	tspan = (0, n*P)
+	prob = ODEProblem(CR3BP!, S, tspan, μ)
+	sol = solve(prob, reltol=1e-8, abstol=1e-8)
+	X = hcat(sol.u...)
+	sol.u[end] - sol.u[1]
+end
+
+# ╔═╡ d2ee1e09-9826-4d36-bef0-af11258c2c5d
+begin
+	Lₓ = [0.836915 1.15568 -1.00506] # QUICK AND DIRTY L-POINT X POS
+	plot([1-μ], [0], lw=0, marker=:circle, color=:black, label="Moon")
+	plot!([Lₓ[1]], [0], lw=0, marker=:circle, color=:red, label="L1")
+	plot!([Lₓ[2]], [0], lw=0, marker=:circle, color=:green, label="L2")
+	plot!(X[1, :], X[2, :], lw=2, color=:blue, alpha=0.5,
+		label="Trajectory", aspect_ratio=:equal)
+	plot!(X[1, [1 end]], X[2, [1 end]], lw=0, marker=:square, color=:blue, label="")
+	
+end
+
+# ╔═╡ 071c7341-edcb-4e8c-888c-0493da13b073
+md"### Problem 2"
+
+# ╔═╡ 1ad873ef-c7ef-46d1-bf3e-f971764883a3
+begin
+	# PREALLOCATING
+	x = Any[]
+	
+	# FUNCTION TO SAVE EVENTS TO OUTSIDE VARIABLE
+	func!(integrator) = push!(x, [integrator.t, integrator.u[1], integrator.u[4]])
+	
+	# CREATING CALLBACK
+	cb = ContinuousCallback((u,t,integrator) -> u[2], func!)
+	
+	# SOLVING
+	sol2 = solve(prob, reltol=1e-8, abstol=1e-8, callback=cb)
+	x = hcat(x...)
+	sol2
+end
+
+# ╔═╡ ffddc06c-e028-4222-aeb9-710689e1b194
+plot(x[2, :], x[3, :], lw=0, marker=:circle, xlim=(0.75, 1.2))
+
+# ╔═╡ 34feb492-9d27-44da-b64d-e955cb83b84d
+md"### Problem 3"
+
+# ╔═╡ 60355fcc-1be2-41a4-a1ad-e2c6a7175200
+begin
+	# SETUP
+	m = 25.0
+	ϵ = 0.01
+	y = Any[]
+	
+	
+	# FUNCTION TO SAVE EVENTS TO OUTSIDE VARIABLE
+	func2!(integrator) = push!(y, [integrator.t integrator.u[1] integrator.u[4]])
+	
+	# CREATING CALLBACK
+	cb2 = ContinuousCallback((u,t,integrator) -> u[2], func2!)
+	
+	# LOOPING SOLUTIONS
+	for i = 1:3
+		IC = [1.17 + ϵ*(rand()+rand()+rand()), 0, 0, 0, -0.489780292125578, 0]
+		prob3 = ODEProblem(CR3BP!, IC, (0.0, m), μ)
+		sol3  = solve(prob3, reltol=1e-8, abstol=1e-8, callback=cb2)
+		
+	end
+	y = vcat(y...)
+end
+
+# ╔═╡ 15c065ed-6069-41e2-bb21-ce945cb95ae2
+plot(y[:, 2], y[:, 3], lw=0, marker=:circle, color=:black)
+
+# ╔═╡ Cell order:
+# ╠═1ee99730-cbe0-11eb-38d2-059884f0d9ba
+# ╠═37042fbf-6450-499a-8330-e94b351594c2
+# ╠═cbbf957c-9399-4132-986a-601687d325c9
+# ╠═d2ee1e09-9826-4d36-bef0-af11258c2c5d
+# ╟─071c7341-edcb-4e8c-888c-0493da13b073
+# ╠═1ad873ef-c7ef-46d1-bf3e-f971764883a3
+# ╠═ffddc06c-e028-4222-aeb9-710689e1b194
+# ╟─34feb492-9d27-44da-b64d-e955cb83b84d
+# ╠═60355fcc-1be2-41a4-a1ad-e2c6a7175200
+# ╠═15c065ed-6069-41e2-bb21-ce945cb95ae2
